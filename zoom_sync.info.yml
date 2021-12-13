@@ -1,0 +1,9 @@
+name: Zoom Sync
+type: module
+description: 'Provides functionality interacting with the Zoom API.'
+package: Custom
+core: 8.x
+core_version_requirement: ^8 || ^9
+configure: zoom_sync.settings
+dependencies:
+  - zoomapi
