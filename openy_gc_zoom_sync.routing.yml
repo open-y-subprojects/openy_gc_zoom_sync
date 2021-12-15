@@ -1,7 +1,7 @@
-zoom_sync.settings:
-  path: '/admin/openy/integrations/zoom_sync/settings'
+openy_gc_zoom_sync.settings:
+  path: '/admin/openy/integrations/openy_gc_zoom_sync/settings'
   defaults:
     _title: 'Zoom Sync Settings'
-    _form: 'Drupal\zoom_sync\Form\ZoomSyncSettingsForm'
+    _form: 'Drupal\openy_gc_zoom_sync\Form\ZoomSyncSettingsForm'
   requirements:
     _permission: 'administer configuration'
