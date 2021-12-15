@@ -1,18 +1,16 @@
 <?php
 
-namespace Drupal\zoom_sync\Plugin\migrate\source;
+namespace Drupal\openy_gc_zoom_sync\Plugin\migrate\source;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\migrate\Plugin\migrate\source\SourcePluginBase;
 use Drupal\migrate\Plugin\MigrationInterface;
-use Drupal\migrate\Row;
-use Drupal\zoom_sync\ZoomSyncClientInterface;
-use Drush\Drush;
+use Drupal\openy_gc_zoom_sync\ZoomSyncClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * @MigrateSource(
- *   id = "zoom_sync_meeting_source"
+ *   id = "openy_gc_zoom_sync_meeting_source"
  * )
  */
 class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactoryPluginInterface {
@@ -20,17 +18,17 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
   /**
    * Name of the daily recurring date.
    */
-  const ZOOM_SYNC_DAILY_TYPE = 'daily_recurring_date';
+  const ZOOM_SYNC_DAILY_TYPE = 'daily';
 
   /**
    * Name of the weekly recurring date.
    */
-  const ZOOM_SYNC_WEEKLY_TYPE = 'weekly_recurring_date';
+  const ZOOM_SYNC_WEEKLY_TYPE = 'weekly';
 
   /**
    * Name of the monthly recurring date.
    */
-  const ZOOM_SYNC_MONTHLY_TYPE = 'monthly_recurring_date';
+  const ZOOM_SYNC_MONTHLY_TYPE = 'monthly';
 
   /**
    * Name of the custom date.
@@ -40,7 +38,7 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
   /**
    * The entity type definition.
    *
-   * @var \Drupal\zoom_sync\ZoomSyncClientInterface
+   * @var \Drupal\openy_gc_zoom_sync\ZoomSyncClientInterface
    */
   protected $zoomSyncClient;
 
@@ -65,6 +63,9 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
     );
   }
 
+  /**
+   * @return array
+   */
   public function fields() {
     return [
       'id' => $this->t('Id'),
@@ -102,11 +103,10 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
   }
 
   /**
-   * @return \ArrayIterator
+   * Method to get week days.
    */
-  protected function initializeIterator() {
-    $data = [];
-    $custom_date = [];
+  private function getWeekDays($week_days) {
+    $wd = '';
     $weekly_days = [
       1 => 'sunday',
       2 => 'monday',
@@ -116,6 +116,21 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       6 => 'friday',
       7 => 'saturday',
     ];
+
+    if (isset($week_days)) {
+      $week_days = explode(',', $week_days);
+      foreach ($week_days as $day) {
+        $wd .= $weekly_days[$day];
+      }
+    }
+    return $wd;
+  }
+
+  /**
+   * Method to get source.
+   */
+  private function getSource() {
+    $data = [];
     $monthly_day = [
       1 => 'first',
       2 => 'second',
@@ -128,6 +143,7 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
 
     foreach ($meetings as $id => $meeting) {
       $recurring_date = [];
+      $r_type = '';
       $recurrence = $meeting['recurrence'] ?? NULL;
       $occurrences = $meeting['occurrences'] ?? NULL;
 
@@ -136,14 +152,22 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
         $duration = $occurrences[0]['duration'];
 
         if (count($occurrences) > 1) {
-          $end_time = str_replace('Z', '', end($occurrences)['start_time']);
-        } else {
-          $end_time = strtotime($start_time) + $duration * 60;
+          $end_time = date('Y-m-d\TH:i:s', strtotime(end($occurrences)['start_time']));
+        }
+        else {
+          $end_date_time = str_replace('Z', '', $recurrence['end_date_time']);
+
+          if ($end_date_time > $start_time) {
+            $end_time = $end_date_time;
+          } else {
+            $start_time = date('Y-m-d\TH:i:s', strtotime($start_time . ' -1 day'));
+            $end_time = date('Y-m-d\TH:i:s', strtotime($start_time . ' +1 day'));
+          }
         }
 
-        $recurring_date = [
-          'value' => date('Y-m-d\TH:i:s', $start_time),
-          'end_value' => date('Y-m-d\TH:i:s', $end_time),
+        $recurring_date[0] = [
+          'start_date' => $start_time,
+          'end_date' => $end_time,
           'time' => date('g:i a', strtotime($start_time)),
           'duration' => $duration * 60
         ];
@@ -152,44 +176,72 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       switch ($recurrence['type']) {
         case 1:
           $r_type = self::ZOOM_SYNC_DAILY_TYPE;
-          $daily_rd[0] = $recurring_date;
           break;
         case 2:
           $r_type = self::ZOOM_SYNC_WEEKLY_TYPE;
-          $weekly_rd[0] = $recurring_date;
-          $weekly_rd[0]['days'] = $weekly_days[$recurrence['weekly_days'] + 1];
+
+          $recurring_date[0]['days'] = $this->getWeekDays($recurrence['weekly_days']);
           break;
         case 3:
           $r_type = self::ZOOM_SYNC_MONTHLY_TYPE;
-          $monthly_rd[0] = $recurring_date;
-          $monthly_rd[0]['days'] = $weekly_days[$recurrence['monthly_weekly_day'] + 1];
-          $monthly_rd[0]['type'] = isset($recurrence['monthly_week']) ? 'weekday' : 'monthday';
-          $monthly_rd[0]['day_occurrence'] = $monthly_day[$recurrence['monthly_week']];
-          $monthly_rd[0]['day_of_month'] = $recurrence['monthly_day'];
+
+          $recurring_date[0]['days'] = $this->getWeekDays($recurrence['monthly_week_day']);
+          $recurring_date[0]['type'] = isset($recurrence['monthly_week']) ? 'weekday' : 'monthday';
+          $recurring_date[0]['day_occurrence'] = $monthly_day[$recurrence['monthly_week']];
+          $recurring_date[0]['day_of_month'] = $recurrence['monthly_day'];
           break;
         case NULL:
           $r_type = self::ZOOM_SYNC_CUSTOM_TYPE;
-          $start_time = $meeting['start_time'];
+          $start_time = str_replace('Z', '', $meeting['start_time']);
+          unset($recurring_date);
 
-          $custom_date[0][0] = [
-            'value' => str_replace('Z', '', $start_time),
-            'end_value' => date('Y-m-d\TH:i:s', strtotime($start_time) + $meeting['duration'] * 60),
+          $recurring_date[0] = [
+            'start_date' => $start_time,
+            'end_date' => date('Y-m-d\TH:i:s', strtotime($start_time) + $meeting['duration'] * 60),
           ];
           break;
+      }
+
+      $data[$id] = [
+        'topic' => $meeting['topic'],
+        'agenda' => $meeting['agenda'],
+        'join_url' => $meeting['join_url'],
+        'start_url' => $meeting['start_url'],
+        'r_type' => $r_type,
+        $r_type . '_rd' => $recurring_date,
+        'tracking_fields' => $meeting['tracking_fields']
+      ];
+    }
+    return $data;
+  }
+
+  /**
+   * @return \ArrayIterator
+   */
+  protected function initializeIterator() {
+    $meetings = $this->getSource();
+
+    foreach ($meetings as $id => $meeting) {
+      $r_type = $meeting['r_type'];
+      $type = $r_type != 'custom' ? '_recurring_date' : '';
+      if (isset($meeting['tracking_fields'])) {
+        $tracked_fields = $meeting['tracking_fields'];
+        $category = str_replace(' ', '_', strtolower($tracked_fields['category']));
+        $instructor = str_replace(' ', '_', strtolower($tracked_fields['instructor']));
+      } else {
+        $category = 1;
+        $instructor = 1;
       }
 
       $data[] = [
         'id' => 'zm_' . $id,
         'topic' => $meeting['topic'] . ' zm_' . $id,
         'body' => $meeting['agenda'],
-        'category' => 3,
-        'level' => 3,
+        'category' => 'zc_' . $category,
+        'instructor' => 'zi_' . $instructor,
         'vm_link_uri' => $meeting['join_url'] ?? $meeting['start_url'],
-        'r_type' => $r_type,
-        'daily_rd' => $r_type == self::ZOOM_SYNC_DAILY_TYPE ? $daily_rd : [],
-        'weekly_rd' => $r_type == self::ZOOM_SYNC_WEEKLY_TYPE ? $weekly_rd : [],
-        'monthly_rd' => $r_type == self::ZOOM_SYNC_MONTHLY_TYPE ? $monthly_rd : [],
-        'custom_date' => $r_type == self::ZOOM_SYNC_CUSTOM_TYPE ? $custom_date : []
+        'r_type' => $r_type . $type,
+        $r_type . '_rd' => $meeting[$r_type . '_rd']
       ];
     }
 

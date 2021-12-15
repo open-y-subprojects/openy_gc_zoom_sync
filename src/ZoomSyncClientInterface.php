@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\zoom_sync;
+namespace Drupal\openy_gc_zoom_sync;
 
 /**
  * Interface ZoomSyncClientInterface.
@@ -27,7 +27,27 @@ interface ZoomSyncClientInterface {
    */
   public function request(string $method, string $endpoint, array $query = [], array $body = []);
 
+  /**
+   * Get method to get content from Zoom API.
+   * @param $url
+   * @param array $params
+   *
+   * @return mixed
+   */
   public function get($url, array $params = []);
 
+  /**
+   * Method to get mapped meeting list.
+   */
   public function getMappedMeetingList();
+
+  /**
+   * Method to get categories list.
+   */
+  public function getCategories();
+
+  /**
+   * Method to get instructors list.
+   */
+  public function getInstructors();
 }

@@ -1,13 +1,13 @@
 <?php
 
-namespace Drupal\zoom_sync\Form;
+namespace Drupal\openy_gc_zoom_sync\Form;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * ZoomSync settings form for configure variables.
+ */
 class ZoomSyncSettingsForm extends ConfigFormBase {
   /**
    * @return string
@@ -20,11 +20,11 @@ class ZoomSyncSettingsForm extends ConfigFormBase {
    * @return string[]
    */
   protected function getEditableConfigNames() {
-    return ['zoom_sync.settings'];
+    return ['openy_gc_zoom_sync.settings'];
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $config = $this->config('zoom_sync.settings');
+    $config = $this->config('openy_gc_zoom_syncs.settings');
 
     $form['help'] = [
       '#type' => 'markup',
@@ -51,7 +51,7 @@ class ZoomSyncSettingsForm extends ConfigFormBase {
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Save the config.
-    $config = $this->config('zoom_sync.settings');
+    $config = $this->config('openy_gc_zoom_sync.settings');
 
     $config->set('data_service_token', $form_state->getValue('data_service_token'));
     $config->set('data_service_url', $form_state->getValue('data_service_url'));

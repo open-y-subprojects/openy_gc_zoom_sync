@@ -1,14 +1,17 @@
 <?php
 
-namespace Drupal\zoom_sync\Client;
+namespace Drupal\openy_gc_zoom_sync\Client;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\zoom_sync\ZoomSyncClientInterface;
+use Drupal\openy_gc_zoom_sync\ZoomSyncClientInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Log\LoggerInterface;
 
+/**
+ * ZoomSync client.
+ */
 class ZoomSyncClient implements ZoomSyncClientInterface {
 
   /**
@@ -47,7 +50,7 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
   protected $baseUri;
 
   /**
-   * ClientFactory constructor.
+   * ZoomSyncClient constructor.
    *
    * @param \Drupal\Core\Config\ImmutableConfig $config
    *   Config.
@@ -112,41 +115,64 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
   }
 
   /**
-   * @return array
+   * Method to get users list from Zoom API.
    */
   private function getUsersList() {
-    $start_page = 1;
     $users_list = [];
     $users = $this->get('/users');
     $page_count = $users['page_count'];
     $page_number = $users['page_number'];
 
-    while ($page_number < $page_count + 1) {
-      $result = $this->get('/users', ['page_number' => $start_page]);
+    for ($number = $page_number; $number < $page_count; $number++) {
+      $result = $this->get('/users', ['page_number' => $number]);
       $users_list = array_merge($users_list, $result['users']);
-      $page_number++;
     }
 
     return $users_list;
   }
 
   /**
-   * @param $email
-   * @param string $type
-   *
-   * @return mixed
+   * Method to get all meetings using email and type.
    */
-  private function getMeetings($email, string $type = 'upcoming') {
+  private function getMeetings(string $email, string $type = 'upcoming') {
     return $this->get( '/users/' . $email . '/meetings', ['type' => $type]);
   }
 
   /**
-   * @param $meeting_id
-   *
-   * @return mixed
+   * Method to get meeting information using meeting id.
    */
   private function getMeetingInfo($meeting_id) {
     return $this->get('/meetings/' . $meeting_id);
+  }
+
+
+  /**
+   * Method to get tracked fields.
+   */
+  private function getTrackedFields($tracked_fields) {
+    $field = [];
+
+    foreach ($tracked_fields as $tracked_field) {
+      switch ($tracked_field['field']) {
+        case '1. Show in the Activity Finder':
+          $field['activity_finder'] = $tracked_field['value'];
+          break;
+        case '2. Location':
+          $field['location'] = $tracked_field['value'];
+          break;
+        case '3. Category':
+          $field['category'] = $tracked_field['value'];
+          break;
+        case '4. Sub-category':
+          $field['sub_category'] = $tracked_field['value'];
+          break;
+        case '5. Instructor name':
+          $field['instructor'] = $tracked_field['value'];
+          break;
+      }
+    }
+
+    return $field;
   }
 
   /**
@@ -175,6 +201,9 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
     return $options;
   }
 
+  /**
+   * Method to get mapped result for all meetings.
+   */
   private function mappedFields($meetings) {
     $mapped_meetings = [];
     foreach ($meetings as $id => $meeting) {
@@ -199,6 +228,7 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
         'join_url' => $meeting['join_url'] ?? NULL,
         'occurrences' => $meeting['occurrences'] ?? NULL,
         'recurrence' => $meeting['recurrence'] ?? NULL,
+        'tracking_fields' => $meeting['tracking_fields'] ? $this->getTrackedFields($meeting['tracking_fields']) : NULL
       ];
     }
     $this->logger->notice('Finished enrich meetings. Count zoom meetings to save: %count', [
@@ -208,7 +238,11 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
     return $mapped_meetings;
   }
 
+  /**
+   * Method to get result mapped list for Zoom API.
+   */
   public function getMappedMeetingList() {
+    $meetings = [];
     $users_list = $this->getUsersList();
 
     foreach ($users_list as $user) {
@@ -225,5 +259,39 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
     }
 
     return $this->mappedFields($meetings);
+  }
+
+  /**
+   * Method to get categories list.
+   */
+  public function getCategories() {
+    $categories = [];
+    $meetings = $this->getMappedMeetingList();
+
+    foreach ($meetings as $meeting) {
+      $tracking_fields = $meeting['tracking_fields'];
+      if (isset($tracking_fields) && !in_array($tracking_fields['category'], $categories)) {
+        $categories[] = $tracking_fields['category'];
+      }
+    }
+
+    return $categories;
+  }
+
+  /**
+   * Method to get instructors list.
+   */
+  public function getInstructors() {
+    $instructors = [];
+    $meetings = $this->getMappedMeetingList();
+
+    foreach ($meetings as $meeting) {
+      $tracking_fields = $meeting['tracking_fields'];
+      if (isset($tracking_fields) && !in_array($tracking_fields['instructor'], $instructors)) {
+        $instructors[] = $tracking_fields['instructor'];
+      }
+    }
+
+    return $instructors;
   }
 }
