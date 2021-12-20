@@ -1,0 +1,10 @@
+{
+  "name": "open-y-subprojects/openy_gc_zoom_sync",
+  "description": "Zoom API events syncer to Virtual Y Virtual Events.",
+  "type": "drupal-module",
+  "require": {
+    "ymcatwincities/openy_gated_content": "*"
+  },
+  "license": "GPL-2.0+",
+  "minimum-stability": "dev"
+}
