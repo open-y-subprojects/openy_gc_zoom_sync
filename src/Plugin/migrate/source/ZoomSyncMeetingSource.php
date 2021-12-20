@@ -2,6 +2,9 @@
 
 namespace Drupal\openy_gc_zoom_sync\Plugin\migrate\source;
 
+use Drupal\Component\Datetime\DateTimePlus;
+use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\migrate\Plugin\migrate\source\SourcePluginBase;
 use Drupal\migrate\Plugin\MigrationInterface;
@@ -43,10 +46,18 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
   protected $zoomSyncClient;
 
   /**
+   * The DateFormatter definition.
+   *
+   * @var \Drupal\Core\Datetime\DateFormatterInterface
+   */
+  protected $dateFormatter;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, MigrationInterface $migration, ZoomSyncClientInterface $zoomSyncClient) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, MigrationInterface $migration, ZoomSyncClientInterface $zoomSyncClient, DateFormatterInterface $dateFormatter) {
     $this->zoomSyncClient = $zoomSyncClient;
+    $this->dateFormatter = $dateFormatter;
     parent::__construct($configuration, $plugin_id, $plugin_definition, $migration);
   }
 
@@ -59,7 +70,8 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       $plugin_id,
       $plugin_definition,
       $migration,
-      $container->get('zoom_sync.client')
+      $container->get('zoom_sync.client'),
+      $container->get('date.formatter')
     );
   }
 
@@ -128,6 +140,8 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
 
   /**
    * Method to get source.
+   *
+   * @throws \Exception
    */
   private function getSource() {
     $data = [];
@@ -140,6 +154,7 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
     ];
 
     $meetings = $this->zoomSyncClient->getMappedMeetingList();
+    $timezone = new \DateTimeZone(date_default_timezone_get());
 
     foreach ($meetings as $id => $meeting) {
       $recurring_date = [];
@@ -148,28 +163,30 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       $occurrences = $meeting['occurrences'] ?? NULL;
 
       if (isset($occurrences)) {
-        $start_time = str_replace('Z', '', $occurrences[0]['start_time']);
-        $duration = $occurrences[0]['duration'];
+        $start = new \DateTime($occurrences[0]['start_time']);
+        $start_time = $start->setTimezone($timezone)->format('Y-m-d\TH:i:s');
 
         if (count($occurrences) > 1) {
-          $end_time = date('Y-m-d\TH:i:s', strtotime(end($occurrences)['start_time']));
+          $end = new \DateTime(end($occurrences)['start_time']);
+          $end_time = $end->setTimezone($timezone)->format('Y-m-d\TH:i:s');
         }
         else {
-          $end_date_time = str_replace('Z', '', $recurrence['end_date_time']);
+          $end = new \DateTime($recurrence['end_date_time']);
+          $end_date_time = $end->setTimezone($timezone)->format('Y-m-d\TH:i:s');
 
           if ($end_date_time > $start_time) {
             $end_time = $end_date_time;
           } else {
-            $start_time = date('Y-m-d\TH:i:s', strtotime($start_time . ' -1 day'));
-            $end_time = date('Y-m-d\TH:i:s', strtotime($start_time . ' +1 day'));
+            $start_time = $start->setTimezone($timezone)->modify('-1 day')->format('Y-m-d\TH:i:s');
+            $end_time = $start->setTimezone($timezone)->modify('+1 day')->format('Y-m-d\TH:i:s');
           }
         }
 
         $recurring_date[0] = [
           'start_date' => $start_time,
           'end_date' => $end_time,
-          'time' => date('g:i a', strtotime($start_time)),
-          'duration' => $duration * 60
+          'time' => $start->setTimezone($timezone)->format('g:i a'),
+          'duration' => $occurrences[0]['duration'] * 60
         ];
       }
 
@@ -192,12 +209,14 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
           break;
         case NULL:
           $r_type = self::ZOOM_SYNC_CUSTOM_TYPE;
-          $start_time = str_replace('Z', '', $meeting['start_time']);
+          $start = new \DateTime($meeting['start_time']);
+          $start_time = $start->setTimezone($timezone)->format('Y-m-d\TH:i:s');
+          $interval = $this->dateFormatter->formatInterval($meeting['duration'] * 60);
           unset($recurring_date);
 
           $recurring_date[0] = [
             'start_date' => $start_time,
-            'end_date' => date('Y-m-d\TH:i:s', strtotime($start_time) + $meeting['duration'] * 60),
+            'end_date' => $start->setTimezone($timezone)->modify('+' . $interval)->format('Y-m-d\TH:i:s')
           ];
           break;
       }
@@ -226,19 +245,16 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       $type = $r_type != 'custom' ? '_recurring_date' : '';
       if (isset($meeting['tracking_fields'])) {
         $tracked_fields = $meeting['tracking_fields'];
-        $category = str_replace(' ', '_', strtolower($tracked_fields['category']));
-        $instructor = str_replace(' ', '_', strtolower($tracked_fields['instructor']));
-      } else {
-        $category = 1;
-        $instructor = 1;
+        $category = $tracked_fields['category'];
+        $instructor = $tracked_fields['instructor'];
       }
 
       $data[] = [
         'id' => 'zm_' . $id,
-        'topic' => $meeting['topic'] . ' zm_' . $id,
+        'topic' => $meeting['topic'],
         'body' => $meeting['agenda'],
-        'category' => 'zc_' . $category,
-        'instructor' => 'zi_' . $instructor,
+        'category' => $category ?? '',
+        'instructor' => $instructor ?? '',
         'vm_link_uri' => $meeting['join_url'] ?? $meeting['start_url'],
         'r_type' => $r_type . $type,
         $r_type . '_rd' => $meeting[$r_type . '_rd']

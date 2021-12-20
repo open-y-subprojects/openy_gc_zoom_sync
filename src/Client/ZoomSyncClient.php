@@ -275,7 +275,7 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
       }
     }
 
-    return $categories;
+    return implode(',', $categories);
   }
 
   /**
@@ -292,6 +292,6 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
       }
     }
 
-    return $instructors;
+    return implode(',', $instructors);
   }
 }
