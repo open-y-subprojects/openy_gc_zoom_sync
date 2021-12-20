@@ -1,0 +1,7 @@
+openy_gc_zoom_sync.settings:
+  path: '/admin/openy/integrations/openy_gc_zoom_sync/settings'
+  defaults:
+    _title: 'Virtual Y Zoom Sync Settings'
+    _form: 'Drupal\openy_gc_zoom_sync\Form\ZoomSyncSettingsForm'
+  requirements:
+    _permission: 'administer gated content configuration'

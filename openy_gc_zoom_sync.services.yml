@@ -1,0 +1,11 @@
+services:
+  zoom_sync.client:
+    class: Drupal\openy_gc_zoom_sync\Client\ZoomSyncClient
+    arguments:
+      - '@http_client'
+      - '@config.factory'
+      - '@logger.channel.zoom_sync'
+
+  logger.channel.zoom_sync:
+    parent: logger.channel_base
+    arguments: ['zoom_sync']

@@ -1,0 +1,7 @@
+langcode: en
+status: true
+dependencies: {  }
+id: openy_gc_zoom_sync
+label: 'Zoom synchronization Migration group'
+description: 'Imports zoom content from Zoom API.'
+module: openy_gc_zoom_sync
