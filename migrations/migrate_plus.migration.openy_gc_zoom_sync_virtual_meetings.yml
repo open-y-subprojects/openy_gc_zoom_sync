@@ -32,14 +32,28 @@ process:
   field_vm_link/uri: vm_link_uri
   field_ls_category:
     -
-      plugin: migration_lookup
-      migration: openy_gc_zoom_sync_gc_category
+      plugin: explode
       source: category
+      delimiter: ','
+    -
+      plugin: entity_generate
+      source: category
+      value_key: name
+      bundle_key: vid
+      bundle: gc_category
+      entity_type: taxonomy_term
   field_gc_instructor_reference:
     -
-      plugin: migration_lookup
-      migration: openy_gc_zoom_sync_instructor
+      plugin: explode
       source: instructor
+      delimiter: ','
+    -
+      plugin: entity_generate
+      source: instructor
+      value_key: name
+      bundle_key: vid
+      bundle: gc_instructor
+      entity_type: taxonomy_term
   recur_type:
     plugin: get
     source: r_type
