@@ -4,6 +4,8 @@ namespace Drupal\openy_gc_zoom_sync\Client;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 use Drupal\openy_gc_zoom_sync\ZoomSyncClientInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
@@ -62,7 +64,7 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
 
     $this->httpClient = $httpClient;
     $this->logger = $logger;
-    $this->configFactory = $config_factory->get('zoom_sync.settings');
+    $this->configFactory = $config_factory->get('openy_gc_zoom_sync.settings');
     $this->apiSecret = $this->configFactory->get('data_service_token');
     $this->baseUri = $this->configFactory->get('data_service_url');
   }
@@ -97,9 +99,11 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
     }
     catch (RequestException $exception) {
       // Log Any exceptions.
-      $this->logger->error('Failed to complete Zoom API Task "%error"', [
-        '%error' => $exception->getMessage()
-      ]);
+      $this->logger->error('Failed to complete Zoom API Task "%error.
+        Please, check your Zoom settings %here or contact to administrator"', [
+          '%error' => $exception->getMessage(),
+          '%here' => Link::fromTextAndUrl(t('here'), Url::fromRoute('openy_gc_zoom_sync.settings')),
+        ]);
       throw $exception;
     }
   }

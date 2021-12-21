@@ -4,6 +4,8 @@ namespace Drupal\openy_gc_zoom_sync\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 
 /**
  * ZoomSync settings form for configure variables.
@@ -24,11 +26,16 @@ class ZoomSyncSettingsForm extends ConfigFormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $config = $this->config('openy_gc_zoom_syncs.settings');
+    $config = $this->config('openy_gc_zoom_sync.settings');
 
     $form['help'] = [
       '#type' => 'markup',
-      '#markup' => $this->t('This configuration form provides settings of Zoom meetings integration.'),
+      '#markup' => $this->t('This configuration form provides settings of Zoom meetings integration.<br>
+        Zoom API documentation you can see @introduction.<br>
+        Instruction how to create Zoom App and get token is @instruction.', [
+          '@introduction' => Link::fromTextAndUrl($this->t('here'), Url::fromUri('https://marketplace.zoom.us/docs/api-reference/introduction'))->toString(),
+          '@instruction' => Link::fromTextAndUrl($this->t('here'), Url::fromUri('https://marketplace.zoom.us/docs/guides/build/jwt-app'))->toString()
+        ]),
     ];
 
     $form['data_service_url'] = [
