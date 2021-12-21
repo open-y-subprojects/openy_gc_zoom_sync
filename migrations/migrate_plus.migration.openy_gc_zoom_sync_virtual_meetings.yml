@@ -61,24 +61,16 @@ process:
     plugin: sub_process
     source: daily_rd
     process:
-      value:
-        plugin: zoom_sync_date_proccess
-        source: start_date
-      end_value:
-        plugin: zoom_sync_date_proccess
-        source: end_date
+      value: start_date
+      end_value: end_date
       time: time
       duration: duration
   weekly_recurring_date:
     plugin: sub_process
     source: weekly_rd
     process:
-      value:
-        plugin: zoom_sync_date_proccess
-        source: start_date
-      end_value:
-        plugin: zoom_sync_date_proccess
-        source: end_date
+      value: start_date
+      end_value: end_date
       time: time
       duration: duration
       days: days
@@ -86,12 +78,8 @@ process:
     plugin: sub_process
     source: monthly_rd
     process:
-      value:
-        plugin: zoom_sync_date_proccess
-        source: start_date
-      end_value:
-        plugin: zoom_sync_date_proccess
-        source: end_date
+      value: start_date
+      end_value: end_date
       time: time
       duration: duration
       days: days
@@ -102,12 +90,8 @@ process:
     plugin: sub_process
     source: custom_rd
     process:
-      value:
-        plugin: zoom_sync_date_proccess
-        source: start_date
-      end_value:
-        plugin: zoom_sync_date_proccess
-        source: end_date
+      value: start_date
+      end_value: end_date
 destination:
   plugin: 'entity:eventseries'
   default_bundle: virtual_meeting
