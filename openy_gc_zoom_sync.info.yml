@@ -1,6 +1,7 @@
 name: OpenY Zoom Sync
 type: module
 description: 'Provides functionality interacting with the Zoom API.'
-package: Custom
+package: Open Y Virtual YMCA
+version: 1.5.2
 core_version_requirement: ^8 || ^9
 configure: openy_gc_zoom_sync.settings
