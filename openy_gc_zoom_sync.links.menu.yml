@@ -1,0 +1,7 @@
+openy_gc_zoom_sync.settings:
+  title: Zoom Sync Settings
+  route_name: openy_gc_zoom_sync.settings
+  parent: openy_system.openy_integrations
+  description: 'Configure Open Y integration with Zoom API.'
+  position: left
+  weight: 30

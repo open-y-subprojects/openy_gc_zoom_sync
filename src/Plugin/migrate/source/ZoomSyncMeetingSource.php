@@ -255,7 +255,7 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
       $r_type = $meeting['r_type'];
       $type = $r_type != 'custom' ? '_recurring_date' : '';
 
-      if (isset($meeting['tracking_fields'])) {
+      if (!empty($meeting['tracking_fields'])) {
         $tracked_fields = $meeting['tracking_fields'];
         $category = $tracked_fields['category'];
         $instructor = $tracked_fields['instructor'];
@@ -265,8 +265,9 @@ class ZoomSyncMeetingSource extends SourcePluginBase implements ContainerFactory
         'id' => 'zm_' . $id,
         'topic' => $meeting['topic'],
         'description' => $meeting['agenda'],
-        'category' => $category ?? '',
-        'instructor' => $instructor ?? '',
+        'category' => !empty($category) ? $category : 'No category',
+        'instructor' => !empty($instructor) ? $instructor : 'No instructor',
+        'level' => 'No level',
         'vm_link_uri' => $meeting['join_url'] ?? $meeting['start_url'],
         'r_type' => $r_type . $type,
         $r_type . '_rd' => $meeting[$r_type . '_rd']

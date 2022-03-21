@@ -42,6 +42,18 @@ process:
       bundle_key: vid
       bundle: gc_category
       entity_type: taxonomy_term
+  field_ls_level:
+    -
+      plugin: explode
+      source: level
+      delimiter: ','
+    -
+      plugin: entity_generate
+      source: level
+      value_key: name
+      bundle_key: vid
+      bundle: gc_level
+      entity_type: taxonomy_term
   field_gc_instructor_reference:
     -
       plugin: explode
