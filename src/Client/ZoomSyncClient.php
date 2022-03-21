@@ -232,7 +232,7 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
         'join_url' => $meeting['join_url'] ?? NULL,
         'occurrences' => $meeting['occurrences'] ?? NULL,
         'recurrence' => $meeting['recurrence'] ?? NULL,
-        'tracking_fields' => $meeting['tracking_fields'] ? $this->getTrackedFields($meeting['tracking_fields']) : NULL
+        'tracking_fields' => $meeting['tracking_fields'] ? $this->getTrackedFields($meeting['tracking_fields']) : []
       ];
     }
     $this->logger->notice('Finished enrich meetings. Count zoom meetings to save: %count', [
@@ -294,6 +294,10 @@ class ZoomSyncClient implements ZoomSyncClientInterface {
       if (isset($tracking_fields) && !in_array($tracking_fields['instructor'], $instructors)) {
         $instructors[] = $tracking_fields['instructor'];
       }
+    }
+
+    if (!count($instructors)) {
+      $instructors[] = 'No instructor';
     }
 
     return implode(',', $instructors);
